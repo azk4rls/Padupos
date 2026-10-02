@@ -1,0 +1,46 @@
+{
+  "name": "padupos-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/server.js",
+    "test": "vitest run src",
+    "test:unit": "vitest run src",
+    "test:integration": "vitest run src/tests/integration.test.ts",
+    "test:security": "vitest run src/tests/security.test.ts",
+    "test:payment": "vitest run src/tests/payment.test.ts",
+    "test:ml": "vitest run src/tests/ml.test.ts",
+    "test:db": "vitest run src/tests/db.test.ts",
+    "test:e2e": "vitest run src/tests/e2e.test.ts",
+    "test:refund": "vitest run src/tests/refund.test.ts",
+    "lint": "echo ok"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "@fastify/helmet": "^13.0.1",
+    "@fastify/rate-limit": "^10.2.2",
+    "@fastify/sensible": "^6.0.3",
+    "@padupos/config": "workspace:*",
+    "@padupos/shared": "workspace:*",
+    "@padupos/types": "workspace:*",
+    "@padupos/validation": "workspace:*",
+    "bignumber.js": "^9.1.2",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.45.3",
+    "fastify": "^5.2.1",
+    "fastify-plugin": "^5.0.1",
+    "postgres": "^3.4.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  }
+}

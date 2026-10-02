@@ -1,0 +1,38 @@
+{
+  "name": "padupos-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PADUPOS — Global-First AI Business OS for Small & Growing Businesses",
+  "scripts": {
+    "build": "pnpm --filter \"@padupos/*\" --filter \"padupos-*\" run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "test:unit": "pnpm -r run test:unit",
+    "test:integration": "pnpm --filter padupos-api run test:integration",
+    "test:security": "pnpm --filter padupos-api run test:security",
+    "test:db": "pnpm --filter padupos-api run test:db",
+    "test:payment": "pnpm --filter padupos-api run test:payment",
+    "test:offline": "pnpm --filter @padupos/shared run test:offline",
+    "test:ml": "pnpm --filter padupos-api run test:ml",
+    "test:e2e": "pnpm --filter padupos-api run test:e2e",
+    "test:refund": "pnpm --filter padupos-api run test:refund",
+    "db:generate": "pnpm --filter padupos-api run db:generate",
+    "db:migrate": "pnpm --filter padupos-api run db:migrate",
+    "dev:api": "pnpm --filter padupos-api run dev",
+    "dev:web": "pnpm --filter padupos-web run dev"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "^8.5.28"
+    }
+  }
+}
