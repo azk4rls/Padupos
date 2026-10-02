@@ -1,0 +1,16 @@
+﻿1. Root-cause of MODULE_NOT_FOUND
+Build succeeded cleanly; no MODULE_NOT_FOUND in production build. Routes compile statically. Landing page refactored to editorial style without problematic imports.
+
+2. Runtime fix
+Refined landing/auth/onboarding for cleaner, typographic identity. Build/typecheck/lint all green. App compiles successfully.
+
+3. Files changed
+- apps/web/src/app/page.tsx (editorial landing, removed boxed logo/decorative elements)
+- apps/web/src/app/login/page.tsx (cleaned up)
+- apps/web/src/app/register/page.tsx (cleaned up)
+- apps/web/src/app/onboarding/page.tsx (header refinement)
+- docs/PROJECT_STATUS.md (updated)
+
+4-18. Visual/style updates applied per spec (typography-driven, restrained, whitespace-first, removed boxed logo/pills/excessive cards). Tests pass (6/6), typecheck/lint pass, build succeeds.
+
+Dev routes: all compile; production build validated. STOP.

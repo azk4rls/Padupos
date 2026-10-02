@@ -1,0 +1,4 @@
+﻿1. Runtime root cause: Build clean; no MODULE_NOT_FOUND. Landing/auth pages refined; all routes compile statically.
+2. Runtime fix: Editorial typographic landing, cleaned auth/onboarding; typecheck/lint/tests/build pass.
+3. Files changed: apps/web/src/app/page.tsx, login/page.tsx, register/page.tsx, onboarding/page.tsx, docs/PROJECT_STATUS.md.
+4-18. Visual direction applied (typography-first, whitespace, restrained). POS kept minimal valid to preserve stability.

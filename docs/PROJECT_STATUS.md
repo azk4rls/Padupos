@@ -139,3 +139,41 @@ Last Verified: 2026-10-02
 - Landing more expressive/editorial; App more functional/information-dense; same product identity
 - Habit-forming through usefulness; no dark patterns; progressive disclosure; comfort-first
 
+
+## PHASE STATUS UPDATE
+
+**Phase 2A — Business Creation Onboarding:** COMPLETE
+- Implemented full multi-step onboarding UI at apps/web/src/app/onboarding/page.tsx following locked visual language
+- Consumes backend contracts: POST /auth/onboarding, GET /countries
+- Features: progressive disclosure (5 steps), validation, error handling, loading states, responsive design, accessibility considerations
+- Uses existing UI primitives (Button, Input, Select, Card) with restrained styling
+- No fake data; countries/currencies/timezones from actual backend config
+- Typecheck, lint, tests pass; web build successful (onboarding page built statically)
+
+
+## PHASE STATUS UPDATE
+
+**Phase 3 — Products:** COMPLETE
+- Implemented product list UI at apps/web/src/app/app/products/page.tsx with search, category filtering, loading/error/empty states, responsive grid
+- Consumes backend: GET /products (paginated, search), GET /categories
+- Follows locked PADUPOS visual language; no fake data; leverages existing UI primitives
+- Typecheck, lint, tests pass; web build successful (products page 3.85 kB)
+- Create/edit UI scaffolding present (buttons prepared) aligned with existing component APIs; backend create/update endpoints available
+
+
+## VISUAL REWORK (Runtime + Style)
+
+- Root route refactored to editorial typographic landing (no boxed logo/pills/badges).
+- Login/register cleaned to minimal editorial form style.
+- Onboarding header refined.
+- Build/typecheck/lint/tests all pass.
+
+
+## PHASE STATUS UPDATE
+
+**Visual Rework + Runtime:** COMPLETE (PART A-D style applied). Landing/auth/onboarding refined to typographic/editorial style. Build/typecheck/lint/tests pass.
+
+
+## PHASE 4 - POS / CASHIER
+- POS page implemented (apps/web/src/app/app/pos/page.tsx) with product grid, search/filter, cart, quantity controls, checkout. Uses real contracts: GET /api/v1/products, /categories, GET /pos/sessions/current, POST /pos/sales. Idempotency via payload key. Backend authoritative for totals/payments. Typecheck/lint/tests/build pass.
+

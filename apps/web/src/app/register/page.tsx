@@ -1,136 +1,77 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { ErrorState } from '@/components/ui/error-state';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { api } from '@/api/client';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { login } = useAuth();
-  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
+    setError(null);
 
-    if (!email.trim() || !password) {
-      setErrorMsg('Semua kolom wajib diisi.');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
-      // In dev/standard auth flow, register token user
-      const userToken = `usr_${email.split('@')[0]}_${Date.now().toString(36)}`;
-      const success = await login(userToken);
-      if (success) {
-        router.push('/onboarding');
-      } else {
-        setErrorMsg('Pendaftaran gagal. Silakan coba kembali.');
+      const res = await api.post<{ token: string }>('/auth/register', { email, password });
+      if (res.error) {
+        setError(res.error.message);
+        setIsSubmitting(false);
+        return;
       }
+      router.push('/login');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mendaftar.');
+      setError(err.message || 'System error');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100/60 p-4 sm:p-6">
-      <div className="w-full max-w-md space-y-6">
-        {/* Brand Header */}
-        <div className="flex flex-col items-center text-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white font-black text-xl mb-3 shadow-sm">
-            P
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            PADUPOS
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Daftar Akun Bisnis Baru
-          </p>
+    <div className="flex min-h-screen items-center justify-center bg-white px-4 py-8">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="space-y-3">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">Create account</h1>
+          <p className="text-sm text-slate-600">Get started with PADUPOS</p>
         </div>
-
-        {/* Register Form Card */}
-        <Card className="border border-border shadow-sm">
-          <CardHeader>
-            <CardTitle>Buat Akun Pemilik</CardTitle>
-            <CardDescription>
-              Mulai kelola kasir, inventori, dan akuntansi bisnis Anda
-            </CardDescription>
-          </CardHeader>
-
-          <form onSubmit={handleRegister}>
-            <CardContent className="space-y-4">
-              {errorMsg && (
-                <ErrorState
-                  title="Pendaftaran Gagal"
-                  message={errorMsg}
-                  className="p-3 text-xs"
-                />
-              )}
-
-              <Input
-                label="Nama Lengkap"
-                type="text"
-                placeholder="Budi Santoso"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-              />
-
-              <Input
-                label="Email Bisnis"
-                type="email"
-                placeholder="budi@toko.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-              />
-
-              <Input
-                label="Kata Sandi"
-                type="password"
-                placeholder="Minimal 8 karakter"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-                required
-              />
-            </CardContent>
-
-            <CardFooter className="flex flex-col gap-3">
-              <Button
-                type="submit"
-                className="w-full"
-                variant="primary"
-                isLoading={isLoading}
-              >
-                Daftar &amp; Siapkan Bisnis
-              </Button>
-
-              <div className="w-full text-center text-xs text-slate-500 pt-2 border-t border-border">
-                Sudah memiliki akun?{' '}
-                <Link
-                  href="/login"
-                  className="font-semibold text-slate-900 hover:underline"
-                >
-                  Masuk di Sini
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" required autoComplete="email" />
+          <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="new-password" />
+          <Input label="Confirm Password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required autoComplete="new-password" />
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+              <p className="text-sm font-medium text-red-700">{error}</p>
+            </div>
+          )}
+          <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>
+            {isSubmitting ? 'Creating account...' : 'Create account'}
+            {!isSubmitting && <ArrowRight className="h-4 w-4 ml-2" />}
+          </Button>
+        </form>
+        <p className="text-center text-sm text-slate-600">
+          Already have an account?{' '}
+          <Link href="/login" className="font-medium text-slate-900 hover:underline">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );
