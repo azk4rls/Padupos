@@ -177,3 +177,11 @@ Last Verified: 2026-10-02
 ## PHASE 4 - POS / CASHIER
 - POS page implemented (apps/web/src/app/app/pos/page.tsx) with product grid, search/filter, cart, quantity controls, checkout. Uses real contracts: GET /api/v1/products, /categories, GET /pos/sessions/current, POST /pos/sales. Idempotency via payload key. Backend authoritative for totals/payments. Typecheck/lint/tests/build pass.
 
+
+## PHASE 5 - INVENTORY + PURCHASES + SUPPLIERS
+- Inventory page: stock levels, movements, search, low-stock indicator. Consumes GET /api/v1/inventory, /inventory/movements, /products. Real data only.
+- Suppliers: list, search. GET /api/v1/suppliers.
+- Purchases: list with totals, type (cash/credit). GET /api/v1/purchases. Uses backend-authoritative values; no floating-point money arithmetic.
+- Visual language preserved (typography-first, whitespace, subtle dividers, tables clean). Responsive. All states (loading/empty/error) covered.
+- Tests/lint/typecheck/build pass. No backend changes. Ready for Phase 6.
+
