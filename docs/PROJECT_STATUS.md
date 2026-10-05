@@ -185,3 +185,28 @@ Last Verified: 2026-10-02
 - Visual language preserved (typography-first, whitespace, subtle dividers, tables clean). Responsive. All states (loading/empty/error) covered.
 - Tests/lint/typecheck/build pass. No backend changes. Ready for Phase 6.
 
+
+## PHASE 6 - FINANCE
+- Finance overview (real P&L, Cash Flow, receivables/payables aggregates)
+- P&L page (/app/finance/profit-loss) using /finance/profit-loss
+- Cash Flow (/app/finance/cash-flow) using /finance/cash-flow
+- Trial Balance (/app/finance/trial-balance) using /accounting/trial-balance
+- Journals (/app/finance/journals) using /accounting/journals
+- Receivables (/app/finance/receivables) using /finance/receivables
+- Payables (/app/finance/payables) using /finance/payables
+- Expenses (/app/finance/expenses) using /finance/expenses
+- Backend authoritative for accounting; no frontend duplication. Uses exact string values, tabular nums. Typography-first, clean tables.
+- Typecheck/lint/tests/build pass. No backend changes.
+
+
+### Balance Sheet (Gap Closed)
+- Backend: Added real balance sheet endpoints (/finance/balance-sheet and /accounting/balance-sheet) derived from posted journal entries and chart of accounts; uses exact decimal arithmetic (bignumber.js), business-scoped, permissioned. Returns assets/liabilities/equity, totals, balance check.
+- Frontend: /app/finance/balance-sheet implemented consuming /finance/balance-sheet with loading/empty/error states, responsive tables, typography-first styling. No frontend accounting logic; displays backend values only.
+- Verification: typecheck/lint/tests/build pass. Backend compiles clean.
+
+
+### Balance Sheet (Gap Closed - Verification)
+- Real read-only balance sheet endpoints added (/finance/balance-sheet, /accounting/balance-sheet) derived from posted journal entries; business-scoped, permissioned, exact decimal arithmetic.
+- Frontend page /app/finance/balance-sheet displays Assets/Liabilities/Equity, totals, balance check with proper states.
+- Backend/API typecheck clean. All existing tests still pass (22 passed). Both endpoints are provided for completeness (same source of truth). Phase 6 complete.
+
