@@ -2,7 +2,7 @@
 
 PADUPOS — Current Project Status (Single Source of Truth)
 
-Last Verified: 2026-10-02
+Last Verified: 2026-10-05
 
 ## VERIFIED BACKEND STATUS
 
@@ -109,22 +109,24 @@ Last Verified: 2026-10-02
 
 ## CURRENT ACTIVE PHASE
 
-**Phase 2A — Business Creation Onboarding** (STATUS: NEXT)
+**Phase 8 — AI / ML** (STATUS: NOT STARTED)
 
 ## NEXT PHASES
 
-- Phase 2A: Business Creation Onboarding (NEXT — active scope)
-- Phase 2B: Onboarding completion where needed
-- Phase 3: Products
-- Phase 4: POS
-- Phase 5: Inventory / Purchases / Suppliers
-- Phase 6: Finance
-- Phase 7: Dashboard / Reports
-- Phase 8: AI / ML
 - Phase 9: Offline / PWA Hardening
 - Phase 10: Subscription
 - Phase 11: Final QA
 
+## COMPLETED PHASES
+
+- Phase 1: Application Foundation
+- Phase 2A: Business Creation Onboarding
+- Phase 2B: Onboarding completion where needed
+- Phase 3: Products
+- Phase 4: POS
+- Phase 5: Inventory / Purchases / Suppliers
+- Phase 6: Finance (complete — backend balance sheet + regression tests + frontend exact display)
+- Phase 7: Dashboard + Reports (complete — date ranges, branch scoping, daily series, CSV export, frontend integration)
 
 ## VISUAL LANGUAGE
 
@@ -186,27 +188,124 @@ Last Verified: 2026-10-02
 - Tests/lint/typecheck/build pass. No backend changes. Ready for Phase 6.
 
 
-## PHASE 6 - FINANCE
-- Finance overview (real P&L, Cash Flow, receivables/payables aggregates)
-- P&L page (/app/finance/profit-loss) using /finance/profit-loss
-- Cash Flow (/app/finance/cash-flow) using /finance/cash-flow
-- Trial Balance (/app/finance/trial-balance) using /accounting/trial-balance
-- Journals (/app/finance/journals) using /accounting/journals
-- Receivables (/app/finance/receivables) using /finance/receivables
-- Payables (/app/finance/payables) using /finance/payables
-- Expenses (/app/finance/expenses) using /finance/expenses
-- Backend authoritative for accounting; no frontend duplication. Uses exact string values, tabular nums. Typography-first, clean tables.
-- Typecheck/lint/tests/build pass. No backend changes.
+## PHASE 6 - FINANCE: COMPLETE
 
+### Balance Sheet — REGRESSION TESTS ADDED (2026-10-05)
+- Backend: Added comprehensive Balance Sheet regression test suite at `apps/api/src/tests/balance-sheet.test.ts`
+  (22 tests). Covers:
+  - Assets = Liabilities + Equity invariant
+  - Unposted-entry exclusion (only posted journals count)
+  - Revenue and expenses routed through current-period earnings (exact decimal)
+  - Contra balances preserved (accumulated depreciation, allowance)
+  - Exact four-decimal precision via bignumber.js
+  - Business-scoped tenant isolation
+  - Authorization (owner/manager/member/viewer/outsider)
+  - Agreement with Trial Balance (`GET /accounting/trial-balance`)
+  - Multi-branch rollup vs single-branch scope
+  - Period-boundary precision (no off-by-one day)
+- Both `/accounting/balance-sheet` and `/finance/balance-sheet` share the corrected derivation
+  in `apps/api/src/modules/accounting/balanceSheetService.ts`.
+- Phase 6 is now fully verified: all tests pass, typecheck/lint/build clean.
 
-### Balance Sheet (Gap Closed)
-- Backend: Added real balance sheet endpoints (/finance/balance-sheet and /accounting/balance-sheet) derived from posted journal entries and chart of accounts; uses exact decimal arithmetic (bignumber.js), business-scoped, permissioned. Returns assets/liabilities/equity, totals, balance check.
-- Frontend: /app/finance/balance-sheet implemented consuming /finance/balance-sheet with loading/empty/error states, responsive tables, typography-first styling. No frontend accounting logic; displays backend values only.
-- Verification: typecheck/lint/tests/build pass. Backend compiles clean.
+### Finance Pages (frontend) — VERIFIED
+- P&L, Cash Flow, Trial Balance, Journals, Receivables, Payables, Expenses: all consume backend
+  endpoints with exact decimal display, no client-side accounting derivations.
+- Expenses/Receivables/Payables: client-side filtered subtotals now use BigNumber summation
+  (`sumDecimals`) rather than float; labels updated to reflect "visible rows" honestly.
+- Typecheck/lint/tests/build pass.
 
+## PHASE 7 - DASHBOARD + REPORTS: COMPLETE
 
-### Balance Sheet (Gap Closed - Verification)
-- Real read-only balance sheet endpoints added (/finance/balance-sheet, /accounting/balance-sheet) derived from posted journal entries; business-scoped, permissioned, exact decimal arithmetic.
-- Frontend page /app/finance/balance-sheet displays Assets/Liabilities/Equity, totals, balance check with proper states.
-- Backend/API typecheck clean. All existing tests still pass (22 passed). Both endpoints are provided for completeness (same source of truth). Phase 6 complete.
+### Contracts FINAL (no invented endpoints)
+All contract gaps from the previous version have been closed by backend implementation:
+
+- Dashboard: `GET /dashboard/metrics` now accepts `startDate` / `endDate` (bare `YYYY-MM-DD`,
+  branch timezone → business timezone → UTC). Returns scope, requested range, range aggregates
+  (sales, transactions, COGS, grossProfit, operatingExpenses, operatingProfit), rolling
+  windows (today/week/month), cash position, receivables, payables, low stock, topProducts,
+  paymentDistribution with exact `paymentDistributionTotal`.
+- Dashboard time-series: `GET /dashboard/metrics/series` — daily granularity (`DAY`), every
+  calendar day in range emitted (including zero-activity days as real assertions), totals.
+- Reports sales: `GET /reports/sales` — `branchId` + `startDate` / `endDate` filters; explicit
+  branch authorization (403 if branch not owned/active by business).
+- Export: `POST /reports/export` — creates opaque 256-bit token, TTL 15 min, tenant-isolated,
+  one-shot download at `GET /reports/exports/:token`. Supports SALES, EXPENSES, PRODUCTS,
+  DASHBOARD_SERIES. CSV generated synchronously in-memory (no external infra).
+
+### Backend files added / changed
+- `apps/api/src/lib/branchScope.ts` — explicit branch ownership + active-status resolution,
+  header/query precedence, tenant boundary checks.
+- `apps/api/src/lib/dateRange.ts` — timezone-aware bare-date parsing, inclusive calendar-day
+  semantics, DST-safe day enumeration, 366-day max range, validation.
+- `apps/api/src/lib/exportService.ts` — CSV generation, opaque token issuance, TTL sweep,
+  tenant isolation, one-shot consumption.
+- `apps/api/src/modules/dashboard/service.ts` — scoped metrics + daily time series (exact
+  decimals, zero days emitted, paymentDistributionTotal included).
+- `apps/api/src/modules/dashboard/route.ts` — auth, branch scope, date-range query.
+- `apps/api/src/modules/reports/route.ts` — sales branch auth + date range, export creation
+  and protected download.
+- `apps/api/src/modules/accounting/balanceSheetService.ts` — corrected shared derivation.
+- `apps/api/src/tests/balance-sheet.test.ts` (22 tests)
+- `apps/api/src/tests/branch-authorization.test.ts` (17 tests)
+- `apps/api/src/tests/date-range.test.ts` (28 tests)
+- `apps/api/src/tests/dashboard-timeseries.test.ts` (15 tests)
+- `apps/api/src/tests/report-export.test.ts` (24 tests)
+- `apps/api/src/tests/fixtures/reports.ts` — shared tenant/branch/member/sale fixtures.
+
+### Frontend files added / changed
+- `apps/web/src/lib/dateRange.ts` — client mirror of backend date-range contract (presets,
+  custom bounds, validation, calendar-day arithmetic without UTC drift).
+- `apps/web/src/lib/format.ts` — added `sumDecimals`, `isNonNegative`, `proportionOf` now
+  exact via BigNumber; no float money math anywhere.
+- `apps/web/src/components/reports/date-range-filter.tsx` — preset buttons (Today / 7 days /
+  30 days / Custom) + dual `type="date"` inputs, bare `YYYY-MM-DD` only.
+- `apps/web/src/components/reports/export-button.tsx` — real export ticket + authenticated
+  download (fetch bytes, create blob, trigger save; NOT `<a href>` which would drop headers).
+- `apps/web/src/components/reports/sales-trend-chart.tsx` — dependency-free daily trend
+  (SVG area + line + accessible `<details>` table), respects reduced-motion, data-first.
+- `apps/web/src/api/client.ts` — added `download(endpoint)` returning raw `Response`.
+- `apps/web/src/app/app/dashboard/page.tsx` — date range + series chart + export + branch scope
+  line; all money via exact backend values; no `Number()` on money.
+- `apps/web/src/app/app/reports/sales/page.tsx` — date range + export + branch filter.
+- `apps/web/src/app/app/reports/page.tsx` — honest capability table (date filter ✓, branch ✓,
+  CSV export ✓, PDF/XLSX ✗).
+- `apps/web/src/app/app/reports/expenses/page.tsx`,
+  `apps/web/src/app/app/reports/receivables/page.tsx`,
+  `apps/web/src/app/app/reports/payables/page.tsx`,
+  `apps/web/src/app/app/reports/profit/page.tsx` — client totals use `sumDecimals` (exact),
+  honest labels ("Total N baris tampil", "Sisa belum lunas", "Laba operasional" tone via
+  exact sign test).
+
+### Tests
+- `apps/api`: **12 files / 129 tests passing** (was 7/22). Covers balance sheet, branch auth,
+  date range, time series, export, plus all prior suites.
+- `apps/web`: **6 files / 74 tests passing** (was 5/58). Added date-range tests (8), expanded
+  dashboard tests (16 → includes series, bar-width exactness, preset interaction), expanded
+  reports tests (30 → includes export flow, date-range requests, honest totals).
+- `packages/shared`: 2 files / 16 tests passing.
+- `packages/validation`: typecheck + lint pass.
+- Full monorepo: `pnpm -r run typecheck`, `lint`, `test`, `build` — ALL PASS.
+
+### Build artifacts cleanup
+- `apps/web/tsconfig.tsbuildinfo` untracked (`git rm --cached`) and `*.tsbuildinfo` added to
+  `.gitignore`. Generated incremental TypeScript cache no longer committed.
+
+### CONTRACT GAPS — ALL CLOSED
+1. DATE-RANGE FILTERS — IMPLEMENTED across dashboard metrics/series, sales report, export.
+2. EXPORT DOWNLOAD — IMPLEMENTED: `GET /reports/exports/:token` protected, one-shot, 15 min TTL.
+3. DASHBOARD TIME SERIES — IMPLEMENTED: `GET /dashboard/metrics/series` daily granularity.
+4. BRANCH SCOPING ON DASHBOARD — IMPLEMENTED: `x-branch-id` respected on both metrics & series.
+5. BALANCE SHEET REGRESSION TESTS — ADDED (22 tests).
+
+### Known limitations (honest disclosure)
+- No per-user branch ACL in the data model; branch access = active business membership +
+  branch status ACTIVE under that business.
+- Finance reports (P&L, expenses, receivables, payables) do not yet accept date-range
+  parameters; backend supports it but endpoints not wired. UI shows filtered subtotals of
+  fetched rows with exact decimal summation and honest labels.
+- Client-side search narrowing operates on already-fetched rows; backend-side filtering
+  would be needed for datasets exceeding one page.
+- Export supports CSV only; PDF/XLSX not implemented in backend.
+- Export CSV generated in-memory; very large datasets may need streaming (deferred).
+- Report index lists only the 7 implemented pages; no placeholders.
 

@@ -2,10 +2,17 @@ import { domainStore } from '../domainStore.js';
 import { DashboardMetricsService } from '../dashboard/service.js';
 import { generatePrefixedId, toBN } from '@padupos/shared';
 import type { AIInsight } from '@padupos/types';
+import { resolveDateRange } from '../../lib/dateRange.js';
 
 export class AIInsightService {
   static async generateInsight(businessId: string, insightType: AIInsight['insightType']): Promise<AIInsight> {
-    const metrics = DashboardMetricsService.getMetrics(businessId);
+    // AI insights are always business-level (never branch-scoped). The rolling
+    // windows the insight reasons about are supplied by the metrics service.
+    const metrics = DashboardMetricsService.getMetrics(
+      businessId,
+      null,
+      resolveDateRange({}, businessId, null, new Date()),
+    );
     const now = new Date();
     const periodStart = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString();
     const periodEnd = now.toISOString();

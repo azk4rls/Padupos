@@ -3,7 +3,7 @@ import { buildApp } from '../app.js';
 import { domainStore } from '../modules/domainStore.js';
 import { clearMemberDirectoryForTesting, registerMemberForTesting } from '../plugins/rbac.js';
 
-describe('PADUPOS — Multi-Tenant Isolation & RBAC Security Tests (Sections 97, 98, 170, 171)', () => {
+describe('PADUPOS â€” Multi-Tenant Isolation & RBAC Security Tests (Sections 97, 98, 170, 171)', () => {
   const app = buildApp();
 
   beforeEach(() => {
@@ -126,5 +126,21 @@ describe('PADUPOS — Multi-Tenant Isolation & RBAC Security Tests (Sections 97,
     });
     expect(expenseRes.statusCode).toBe(403);
     expect(expenseRes.json().error.code).toBe('PERMISSION_DENIED');
+  });
+});
+
+// ================================================================
+// Rate limiting — the only suite that runs WITH the limiter enabled.
+// ================================================================
+describe('PADUPOS - Rate Limiting', () => {
+  const limitedApp = buildApp();
+
+  it('throttles a flood of requests with 429', async () => {
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 400; attempt += 1) {
+      const res = await limitedApp.inject({ method: 'GET', url: '/health' });
+      statuses.push(res.statusCode);
+    }
+    expect(statuses).toContain(429);
   });
 });

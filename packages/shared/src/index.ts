@@ -8,7 +8,7 @@ BigNumber.config({
   EXPONENTIAL_AT: [-10, 20],
 });
 
-export * from './offline.js';
+export * from './offline';
 
 // ================================================================
 // 1. DECIMAL ARITHMETIC UTILITIES

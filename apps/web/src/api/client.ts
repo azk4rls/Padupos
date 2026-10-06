@@ -116,6 +116,35 @@ export class ApiClient {
   delete<T>(endpoint: string, options?: RequestInit) {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
+
+  /**
+   * Fetch a protected non-JSON payload (CSV export) with the full tenant header set.
+   *
+   * Returns the raw Response rather than an ApiResponse, because the caller needs the
+   * bytes and the real status code: a one-shot export ticket legitimately answers 410
+   * on replay, which the JSON error path would flatten into a generic failure. The
+   * caller inspects `ok` and reads `blob()`.
+   */
+  async download(endpoint: string, options: RequestInit = {}): Promise<Response> {
+    const headers: Record<string, string> = {
+      ...((options.headers as Record<string, string>) || {}),
+    };
+
+    const token = this.config.getAuthToken?.();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const businessId = this.config.getBusinessId?.();
+    if (businessId) headers['x-business-id'] = businessId;
+
+    const branchId = this.config.getBranchId?.();
+    if (branchId) headers['x-branch-id'] = branchId;
+
+    const url = `${this.config.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const res = await fetch(url, { ...options, headers, method: 'GET' });
+
+    if (res.status === 401) this.config.onUnauthorized?.();
+    return res;
+  }
 }
 
 // Global API Client Instance

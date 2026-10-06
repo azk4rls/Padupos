@@ -4,7 +4,7 @@ import { domainStore } from '../modules/domainStore.js';
 import { clearMemberDirectoryForTesting } from '../plugins/rbac.js';
 
 describe('PADUPOS — Real-World End-to-End Acceptance Test (Section 216)', () => {
-  const app = buildApp();
+  const app = buildApp({ disableRateLimit: true });
   const testUserId = 'test_owner_1';
 
   beforeEach(() => {

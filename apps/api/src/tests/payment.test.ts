@@ -4,7 +4,7 @@ import { domainStore } from '../modules/domainStore.js';
 import { clearMemberDirectoryForTesting } from '../plugins/rbac.js';
 
 describe('PADUPOS — Payment Provider Sandbox, Webhook & Idempotency Tests (Sections 17, 18, 46, 47, 48)', () => {
-  const app = buildApp();
+  const app = buildApp({ disableRateLimit: true });
   const testUserId = 'test_owner_pay';
 
   beforeEach(() => {

@@ -4,7 +4,7 @@ import { domainStore } from '../modules/domainStore.js';
 import { clearMemberDirectoryForTesting } from '../plugins/rbac.js';
 
 describe('PADUPOS — Multi-Tenant Database & RLS Isolation Audit (P0 Item 11 & 12)', () => {
-  const app = buildApp();
+  const app = buildApp({ disableRateLimit: true });
   const userA = 'user_tenant_a';
   const userB = 'user_tenant_b';
 

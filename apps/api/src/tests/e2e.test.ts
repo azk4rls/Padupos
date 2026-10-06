@@ -4,7 +4,7 @@ import { domainStore } from '../modules/domainStore.js';
 import { clearMemberDirectoryForTesting } from '../plugins/rbac.js';
 
 describe('PADUPOS — Full Lifecycle End-to-End Accounting & POS Test (P0 Items 4, 5, 16, 17, 18)', () => {
-  const app = buildApp();
+  const app = buildApp({ disableRateLimit: true });
   const testUserId = 'e2e_owner_user';
 
   let tenantHeaders: Record<string, string>;

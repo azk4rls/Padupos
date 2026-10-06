@@ -27,7 +27,7 @@ import { syncRoutes } from './modules/sync/route.js';
 import { subscriptionsRoutes } from './modules/subscriptions/route.js';
 import { auditRoutes } from './modules/audit/route.js';
 
-export function buildApp(): FastifyInstance {
+export function buildApp(options: { disableRateLimit?: boolean } = {}): FastifyInstance {
   const app = Fastify({
     logger: false, // Clean test output
     trustProxy: true,
@@ -41,10 +41,15 @@ export function buildApp(): FastifyInstance {
   });
 
   // 2. Rate Limiting
-  app.register(rateLimit, {
-    max: config.RATE_LIMIT_MAX,
-    timeWindow: config.RATE_LIMIT_TIME_WINDOW_MS,
-  });
+  // Regression suites legitimately issue hundreds of requests per process, so they
+  // pass `disableRateLimit`. The limiter itself is still covered, explicitly, by
+  // security.test.ts which boots its own app with it ENABLED and asserts the 429.
+  if (!options.disableRateLimit) {
+    app.register(rateLimit, {
+      max: config.RATE_LIMIT_MAX,
+      timeWindow: config.RATE_LIMIT_TIME_WINDOW_MS,
+    });
+  }
 
   // 3. Error Handling
   app.setErrorHandler(errorHandler);

@@ -7,6 +7,7 @@ import {
 } from '@padupos/validation';
 import { domainStore } from '../domainStore.js';
 import { requirePermission } from '../../plugins/rbac.js';
+import { buildBalanceSheet } from '../accounting/balanceSheetService.js';
 import { generatePrefixedId, toBN } from '@padupos/shared';
 import type { Expense, ExpenseCategory, JournalEntry, Receivable, Payable } from '@padupos/types';
 import BigNumber from 'bignumber.js';
@@ -301,50 +302,8 @@ export const financeRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // Balance Sheet (shared derivation with /accounting/balance-sheet)
   fastify.get('/finance/balance-sheet', { preHandler: [...auth, requirePermission('finance.view')] }, async (request) => {
-    const businessId = request.businessContext!.businessId;
-    const accountBalances: Record<string, { code: string; name: string; type: string; debit: string; credit: string }> = {};
-    for (const j of domainStore.journalEntries.values()) {
-      if (j.businessId === businessId && j.isPosted) {
-        const lines = domainStore.journalLines.get(j.id) || [];
-        for (const line of lines) {
-          const acc = domainStore.accounts.get(line.accountId);
-          if (!acc) continue;
-          if (!accountBalances[acc.id]) {
-            accountBalances[acc.id] = { code: acc.code, name: acc.name, type: acc.type, debit: '0.0000', credit: '0.0000' };
-          }
-          accountBalances[acc.id].debit = toBN(accountBalances[acc.id].debit).plus(toBN(line.debit)).toFixed(4);
-          accountBalances[acc.id].credit = toBN(accountBalances[acc.id].credit).plus(toBN(line.credit)).toFixed(4);
-        }
-      }
-    }
-    const format = (d: string, c: string, type: string) => {
-      const db = toBN(d); const cr = toBN(c);
-      if (type === 'ASSET' || type === 'EXPENSE') return db.minus(cr).toFixed(4);
-      return cr.minus(db).toFixed(4);
-    };
-    let totalAssets = new BigNumber(0), totalLiabilities = new BigNumber(0), totalEquity = new BigNumber(0);
-    const assets: any[] = [], liabilities: any[] = [], equity: any[] = [];
-    for (const bal of Object.values(accountBalances)) {
-      const amount = format(bal.debit, bal.credit, bal.type);
-      const amtBN = toBN(amount);
-      if (bal.type === 'ASSET' && amtBN.isGreaterThan(0)) {
-        assets.push({ code: bal.code, name: bal.name, type: bal.type, amount: amtBN.abs().toFixed(4) });
-        totalAssets = totalAssets.plus(amtBN.abs());
-      } else if (bal.type === 'LIABILITY' && amtBN.isGreaterThan(0)) {
-        liabilities.push({ code: bal.code, name: bal.name, type: bal.type, amount: amtBN.abs().toFixed(4) });
-        totalLiabilities = totalLiabilities.plus(amtBN.abs());
-      } else if (bal.type === 'EQUITY' && amtBN.isGreaterThan(0)) {
-        equity.push({ code: bal.code, name: bal.name, type: bal.type, amount: amtBN.abs().toFixed(4) });
-        totalEquity = totalEquity.plus(amtBN.abs());
-      }
-    }
-    const assetsTotal = totalAssets; const liabEquityTotal = totalLiabilities.plus(totalEquity);
-    const isBalanced = assetsTotal.isEqualTo(liabEquityTotal);
-    return {
-      assets, liabilities, equity,
-      totals: { assets: assetsTotal.toFixed(4), liabilities: totalLiabilities.toFixed(4), equity: totalEquity.toFixed(4), liabilitiesPlusEquity: liabEquityTotal.toFixed(4) },
-      balanceCheck: { balanced: isBalanced, difference: assetsTotal.minus(liabEquityTotal).toFixed(4) }
-    };
+    return buildBalanceSheet(request.businessContext!.businessId);
   });
 };

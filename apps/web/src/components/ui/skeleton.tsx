@@ -7,7 +7,8 @@ export function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('animate-pulse rounded bg-slate-200/80', className)}
+      aria-hidden="true"
+      className={cn('animate-pulse rounded bg-slate-200/80 motion-reduce:animate-none', className)}
       {...props}
     />
   );
@@ -15,7 +16,13 @@ export function Skeleton({
 
 export function SkeletonPage() {
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="Memuat data"
+      className="space-y-4 p-4 sm:p-6"
+    >
+      <span className="sr-only">Memuat data…</span>
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-9 w-28" />

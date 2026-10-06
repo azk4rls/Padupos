@@ -31,6 +31,29 @@
   }
 }
 
+/* Restrained entrance for data bars. Width animates from zero so the reveal
+   reads as growth rather than decoration. */
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Motion is opt-out: never animate for users who ask for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom scrollbars for data-dense tables and POS panels */
 ::-webkit-scrollbar {
   width: 6px;
