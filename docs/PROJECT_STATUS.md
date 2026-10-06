@@ -2,7 +2,7 @@
 
 PADUPOS — Current Project Status (Single Source of Truth)
 
-Last Verified: 2026-10-05
+Last Verified: 2026-10-06
 
 ## VERIFIED BACKEND STATUS
 
@@ -14,14 +14,14 @@ Last Verified: 2026-10-05
 - API: Fastify v5.2.1, TypeScript 5.7.3 (apps/api)
 - Schema: Comprehensive Drizzle schema at apps/api/src/db/schema/index.ts covering auth, businesses, branches, products, inventory, POS, accounting (true double-entry), payments, ML, AI, audit, subscriptions, sync
 - Migrations: supabase/migrations/00001_initial_schema.sql present
-- Tests present: db, integration, security, payment, ml, e2e, refund (all under apps/api/src/tests/)
+- Tests present: db, integration, security, payment, ml, e2e, refund, ml-data-readiness, ai-business-insights (all under apps/api/src/tests/)
 - Backend build configuration present (tsconfig.json, build script produces dist)
 
 **Quality Gates:**
-- Typecheck: Configured via pnpm -r run typecheck
-- Lint: Configured via pnpm -r run lint (API returns 'ok')
-- Build: Configured via pnpm build (workspace)
-- Test: Configured via pnpm -r run test
+- Typecheck: Configured via pnpm -r run typecheck (ALL PASS)
+- Lint: Configured via pnpm -r run lint (ALL PASS)
+- Build: Configured via pnpm build (workspace - ALL PASS)
+- Test: Configured via pnpm -r run test (252/252 PASS)
 
 
 ## AUTH / SECURITY
@@ -68,9 +68,9 @@ Last Verified: 2026-10-05
 
 ## ML
 
-- ML module present (apps/api/src/modules/ml/route.ts, service.ts)
-- Data sufficiency logic implemented (ml.test.ts validates insufficient-data behavior)
-- Forecast models and fallback behavior present
+- ML module present (apps/api/src/modules/ml/route.ts, service.ts, dataReadiness.ts, insightEngine.ts, pythonBridge.ts, llmProvider.ts)
+- Data sufficiency logic implemented (ml.test.ts, ml-data-readiness.test.ts, ai-business-insights.test.ts validate insufficient-data behavior)
+- Baseline forecast models and data readiness pipelines present
 - Deterministic insufficient-data behavior enforced
 
 ## AI
@@ -78,6 +78,7 @@ Last Verified: 2026-10-05
 - AI module present (apps/api/src/modules/ai/route.ts, service.ts)
 - Grounded, deterministic behavior; read-only by design
 - Insufficient-data behavior enforced (per tests and rules)
+- LLM explanation provider boundary with zero-hallucination guarantees and graceful offline fallback
 
 ## OFFLINE
 
@@ -109,12 +110,15 @@ Last Verified: 2026-10-05
 
 ## CURRENT ACTIVE PHASE
 
-**Phase 8 — AI / ML** (STATUS: Phase 8.1 COMPLETE, Phase 8.2+ NOT STARTED)
+**Phase 8.3 — Sales Forecast** (STATUS: Phase 8.1 & Phase 8.2 COMPLETE)
 
 ## NEXT PHASES
 
-- Phase 8.2: AI Insights (LLM-grounded analysis using prepared datasets)
-- Phase 8.3: ML Frontend (Forecast & Insights UI)
+- Phase 8.3: Sales Forecast (Time-series forecasting models & training pipelines)
+- Phase 8.4: Stock Forecast (Reorder point & days-of-cover demand forecasting)
+- Phase 8.5: Anomaly Detection (Statistical transaction & expense anomaly scoring)
+- Phase 8.6: ML Integration
+- Phase 8.7: Testing + Production Hardening
 - Phase 9: Offline / PWA Hardening
 - Phase 10: Subscription
 - Phase 11: Final QA
@@ -130,6 +134,7 @@ Last Verified: 2026-10-05
 - Phase 6: Finance (complete — backend balance sheet + regression tests + frontend exact display)
 - Phase 7: Dashboard + Reports (complete — date ranges, branch scoping, daily series, CSV export, frontend integration)
 - Phase 8.1: ML Data Readiness (complete — ML data contracts, dataset builders, training data extraction, Python bridge)
+- Phase 8.2: AI Business Insights (complete — deterministic grounded insight engine, 4 insight categories, LLM explanation boundary, sufficiency rules, zero-hallucination guarantees)
 
 ## VISUAL LANGUAGE
 
@@ -365,25 +370,100 @@ future ML/AI consumption.
 
 ### Key Design Decisions
 1. **Data sufficiency is never faked** — every dataset carries a `sufficiency` field
-   with honest `INSUFFICIENT_DATA` when thresholds are not met.
+    with honest `INSUFFICIENT_DATA` when thresholds are not met.
 2. **MODEL_FAILURE ≠ INSUFFICIENT_DATA** — Python worker crashes are never disguised
-   as data insufficiency; they surface as explicit MODEL_FAILURE status.
+    as data insufficiency; they surface as explicit MODEL_FAILURE status.
 3. **Exact decimal arithmetic** — all monetary aggregation uses bignumber.js with
-   4-decimal precision; no floating-point money arithmetic anywhere.
+    4-decimal precision; no floating-point money arithmetic anywhere.
 4. **Timezone-aware bucketing** — sales are bucketed by scope-local calendar day
-   (branch.timezone → business.timezone → UTC), not by server time or UTC midnight.
+    (branch.timezone → business.timezone → UTC), not by server time or UTC midnight.
 5. **Tenant isolation** — every dataset builder filters by businessId; branch scope
-   is optional (null = business-level rollup).
+    is optional (null = business-level rollup).
 6. **Zero-day filling** — calendar ranges emit observations for every day including
-   days with zero activity, ensuring ML time series have no gaps.
+    days with zero activity, ensuring ML time series have no gaps.
 
 ### Known Limitations
 - Python ML worker (`workers/ml/worker.py`) does not yet exist; `PythonBridge`
-  contract is ready but actual model training/inference is deferred to Phase 8.2+.
+  contract is ready but actual model training/inference is deferred to Phase 8.3+.
 - No caching of dataset results; each request recomputes from domainStore.
 - Product demand trend uses simple 7-day MA vs overall average ratio;
   more sophisticated trend detection deferred.
 - Business insight dataset aging calculation uses range end date as reference;
   real-time aging would use current date.
 
+## PHASE 8.2 — AI BUSINESS INSIGHTS: COMPLETE
 
+### Overview
+Phase 8.2 implements grounded, deterministic AI business insight generation consuming
+the real prepared datasets from Phase 8.1. Insights are 100% grounded in underlying transaction,
+inventory, expense, and accounting data with zero hallucination. An authoritative deterministic
+synthesis engine provides objective natural language summaries and recommendations in Indonesian,
+paired with a resilient LLM explanation boundary interface.
+
+### Architecture Flow
+```
+Real Tenant Data Store (sales, items, inventory, expenses, journals)
+        ↓
+Phase 8.1 Prepared Datasets (SalesDaily, ProductDemand, BusinessInsight)
+        ↓
+Deterministic Insight Engine (DeterministicInsightEngine in apps/api/src/modules/ml/insightEngine.ts)
+        ↓
+LLM Explanation Boundary (DeterministicLLMProvider default, MockLLMProvider for tests)
+        ↓
+Structured AIInsight Contract (title, summary, severity, recommendation, metricsSnapshot, sufficiency)
+        ↓
+Fastify Endpoints (GET/POST /api/v1/ml/insights, /api/v1/ai/insights)
+```
+
+### Insight Categories Implemented
+1. **`SALES_TREND`**:
+   - Trajectory detection (`UP`, `DOWN`, `FLAT`) based on chronological half-period comparisons.
+   - Growth percentage calculation, peak sales date discovery, top contributing product.
+   - Severity: `POSITIVE` for growth > 5%, `WARNING` for drops > 15%, `INFO` for flat/mild movement.
+2. **`INVENTORY_RISK`**:
+   - Evaluates out-of-stock count (`availableQuantity <= 0`) and low stock warnings (`daysOfCover <= 7` or `<= minStock`).
+   - Grounded product identification and total inventory valuation.
+   - Severity: `CRITICAL` for out-of-stock items, `WARNING` for low-stock risks, `POSITIVE` for healthy inventory.
+3. **`EXPENSE_SPIKE`**:
+   - Computes total operating expenses, expense categories breakdown, and expense-to-revenue ratio.
+   - Flags single-category dominance (> 60% of total expenses) or high expense ratio (> 60%).
+   - Severity: `WARNING` for high expense ratio or dominance spike, `INFO` for controlled expenses.
+4. **`BUSINESS_SUMMARY`**:
+   - Holistic synthesis: Revenue, COGS, Gross Profit, Gross Margin %, Operating Expenses, Operating Profit.
+   - Average basket size (ATV), top selling product, stock valuation, and receivables/payables aging status.
+   - Severity: `POSITIVE` for profitable operations, `WARNING` for operational deficit.
+
+### LLM Boundary & Offline Resilience
+- Clean provider adapter: `DeterministicLLMProvider` (authoritative default, zero API key required, zero latency).
+- Safe execution wrapper `generateInsightExplanation`:
+  - Enforces prompt inputs to strictly structured facts and date ranges (no arbitrary DB queries).
+  - Validates output structure; if provider fails, times out, or returns malformed/empty text, gracefully falls back to deterministic summary with `modelUsed: 'deterministic_engine_v2'`.
+  - Zero secrets or API keys exposed to client surfaces.
+
+### Endpoints Added / Updated
+- `GET /api/v1/ml/insights` — List/generate grounded active AI insights (branch-scoped, date-range filtered, RBAC `ml.view`).
+- `POST /api/v1/ml/insights/generate` — Generate on-demand grounded insight (validated via `generateAiInsightSchema`).
+- `GET /api/v1/ai/insights` & `POST /api/v1/ai/insights/generate` — Backward-compatible integration with `AIInsightService`.
+
+### Tests Added (`apps/api/src/tests/ai-business-insights.test.ts`)
+13 new comprehensive tests (158 total in API):
+- Tenant isolation (Tenant A data never leaks to Tenant B)
+- Branch isolation (Branch A insights only analyze Branch A transactions/inventory/expenses)
+- Grounded sales trend insight (revenue, top product, peak date, exact profit)
+- Critical out-of-stock and low-stock inventory risk detection
+- Healthy inventory state verification
+- Operating expense ratio spike warning
+- Grounded business summary with financial margins
+- Data sufficiency enforcement (returns structured `INSUFFICIENT_DATA` without fabricating numbers)
+- GET `/ml/insights` 4-category batch generation
+- Exact 4-decimal precision preservation across decimal arithmetic
+- LLM provider failure graceful fallback
+- LLM provider malformed response graceful fallback
+- RBAC permissions enforcement (`403` on unauthorized requests)
+
+### Explicit Non-Goals / What is NOT Implemented in Phase 8.2
+- **Sales Forecast (ARIMA/Prophet/LightGBM)** is NOT implemented in Phase 8.2 (deferred to Phase 8.3).
+- **Stock Forecast / Reorder Point ML Models** are NOT implemented in Phase 8.2 (deferred to Phase 8.4).
+- **Anomaly Detection ML Models** are NOT implemented in Phase 8.2 (deferred to Phase 8.5).
+- **No production ML model is trained** in Phase 8.2.
+- **No Redis / BullMQ / External infrastructure** was introduced.

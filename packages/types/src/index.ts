@@ -1141,18 +1141,54 @@ export interface AnomalyDetectionDataset {
   sufficiency: MLDataSufficiencyResult;
 }
 
+export type InsightSeverity = 'INFO' | 'WARNING' | 'CRITICAL' | 'POSITIVE';
+
 export interface AIInsight {
   id: string;
   businessId: string;
+  branchId?: string | null;
   insightType: 'SALES_TREND' | 'INVENTORY_RISK' | 'EXPENSE_SPIKE' | 'BUSINESS_SUMMARY';
   title: string;
   summary: string;
+  severity?: InsightSeverity;
+  recommendation?: string;
   dataPeriod: { start: string; end: string };
   metricsSnapshot: Record<string, unknown>; // Deterministic numbers fed into LLM
   promptTemplateVersion: string;
   modelUsed: string;
   status: 'ACTIVE' | 'STALE' | 'DISMISSED';
   generatedAt: string;
+  sufficiency?: MLDataSufficiencyResult;
+}
+
+export interface AIInsightGenerationRequest {
+  insightType: AIInsight['insightType'];
+  branchId?: string | null;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface AIInsightListResponse {
+  insights: AIInsight[];
+  sufficiency?: MLDataSufficiencyResult;
+}
+
+export interface LLMExplanationRequest {
+  insightType: AIInsight['insightType'];
+  dataPeriod: { start: string; end: string };
+  metricsSnapshot: Record<string, unknown>;
+  deterministicTitle: string;
+  deterministicSummary: string;
+  businessName?: string;
+  branchName?: string;
+  locale?: string;
+}
+
+export interface LLMExplanationResult {
+  title: string;
+  summary: string;
+  recommendation?: string;
+  modelUsed: string;
 }
 
 // --- Audit & Observability ---

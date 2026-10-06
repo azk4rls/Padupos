@@ -10,6 +10,7 @@ import type {
   BusinessInsightDataset,
   MLTrainingDataResponse,
   MLTrainingDataRequest,
+  AIInsight,
 } from '@padupos/types';
 import BigNumber from 'bignumber.js';
 import {
@@ -27,6 +28,7 @@ import {
   buildBusinessInsightDataset,
   buildMLTrainingData,
 } from './dataReadiness.js';
+import { DeterministicInsightEngine } from './insightEngine.js';
 
 export class MLService {
   static MIN_TRANSACTIONS_FOR_FORECAST = 30;
@@ -247,4 +249,26 @@ export class MLService {
 
     return buildMLTrainingData(businessId, branchId, req.predictionType, range);
   }
+
+  // ================================================================
+  // 3. PHASE 8.2 AI BUSINESS INSIGHTS
+  // ================================================================
+
+  static async getInsights(
+    businessId: string,
+    branchId: string | null,
+    query?: DateRangeQuery & { insightType?: AIInsight['insightType'] },
+  ) {
+    return DeterministicInsightEngine.getInsights(businessId, branchId, query);
+  }
+
+  static async generateInsight(
+    businessId: string,
+    branchId: string | null,
+    insightType: AIInsight['insightType'],
+    query?: DateRangeQuery,
+  ) {
+    return DeterministicInsightEngine.generateInsight(businessId, branchId, insightType, query);
+  }
 }
+

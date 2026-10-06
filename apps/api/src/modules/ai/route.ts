@@ -19,7 +19,10 @@ export const aiRoutes: FastifyPluginAsync = async (fastify) => {
     const businessId = request.businessContext!.businessId;
     const body = generateAiInsightSchema.parse(request.body);
 
-    const insight = await AIInsightService.generateInsight(businessId, body.insightType);
+    const insight = await AIInsightService.generateInsight(businessId, body.insightType, body.branchId, {
+      startDate: body.startDate,
+      endDate: body.endDate,
+    });
     return reply.status(201).send({ insight });
   });
 };

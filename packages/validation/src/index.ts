@@ -301,9 +301,18 @@ export const offlineSyncBatchSchema = z.object({
 });
 
 // AI & ML
+export const aiInsightQuerySchema = z.object({
+  insightType: z.enum(['SALES_TREND', 'INVENTORY_RISK', 'EXPENSE_SPIKE', 'BUSINESS_SUMMARY']).optional(),
+  branchId: z.string().min(1).optional(),
+  startDate: z.string().trim().optional(),
+  endDate: z.string().trim().optional(),
+});
+
 export const generateAiInsightSchema = z.object({
   insightType: z.enum(['SALES_TREND', 'INVENTORY_RISK', 'EXPENSE_SPIKE', 'BUSINESS_SUMMARY']),
   branchId: z.string().min(1).optional(),
+  startDate: z.string().trim().optional(),
+  endDate: z.string().trim().optional(),
 });
 
 // Accounting Period
