@@ -313,3 +313,18 @@ export const createAccountingPeriodSchema = z.object({
   endDate: z.string().min(1),
 });
 
+// ML Data Readiness Schemas
+export const mlDatasetQuerySchema = z.object({
+  startDate: z.string().trim().optional(),
+  endDate: z.string().trim().optional(),
+  branchId: z.string().min(1).optional(),
+  productIds: z.union([z.string(), z.array(z.string())]).optional(),
+});
+
+export const mlTrainingDataRequestSchema = z.object({
+  branchId: z.string().min(1).nullable().optional(),
+  predictionType: z.enum(['SALES_FORECAST', 'STOCK_FORECAST', 'ANOMALY_DETECTION']),
+  lookbackDays: z.coerce.number().int().min(1).max(366).default(30),
+  maxTrainingDays: z.coerce.number().int().min(1).max(366).optional(),
+});
+

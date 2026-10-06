@@ -1,4 +1,4 @@
-﻿# PROJECT_STATUS.md
+# PROJECT_STATUS.md
 
 PADUPOS — Current Project Status (Single Source of Truth)
 
@@ -109,10 +109,12 @@ Last Verified: 2026-10-05
 
 ## CURRENT ACTIVE PHASE
 
-**Phase 8 — AI / ML** (STATUS: NOT STARTED)
+**Phase 8 — AI / ML** (STATUS: Phase 8.1 COMPLETE, Phase 8.2+ NOT STARTED)
 
 ## NEXT PHASES
 
+- Phase 8.2: AI Insights (LLM-grounded analysis using prepared datasets)
+- Phase 8.3: ML Frontend (Forecast & Insights UI)
 - Phase 9: Offline / PWA Hardening
 - Phase 10: Subscription
 - Phase 11: Final QA
@@ -127,6 +129,7 @@ Last Verified: 2026-10-05
 - Phase 5: Inventory / Purchases / Suppliers
 - Phase 6: Finance (complete — backend balance sheet + regression tests + frontend exact display)
 - Phase 7: Dashboard + Reports (complete — date ranges, branch scoping, daily series, CSV export, frontend integration)
+- Phase 8.1: ML Data Readiness (complete — ML data contracts, dataset builders, training data extraction, Python bridge)
 
 ## VISUAL LANGUAGE
 
@@ -308,4 +311,79 @@ All contract gaps from the previous version have been closed by backend implemen
 - Export supports CSV only; PDF/XLSX not implemented in backend.
 - Export CSV generated in-memory; very large datasets may need streaming (deferred).
 - Report index lists only the 7 implemented pages; no placeholders.
+
+## PHASE 8.1 — ML DATA READINESS: COMPLETE
+
+### Overview
+Phase 8.1 establishes the ML data contract layer: typed datasets, feature extraction,
+sufficiency evaluation, and the Python ML worker boundary. No model training or inference
+is performed — this phase prepares structured, tenant-isolated, timezone-aware data for
+future ML/AI consumption.
+
+### ML Data Types Added (`packages/types/src/index.ts`)
+- `MLDataSufficiencyStatus`, `MLDataSufficiencyResult` — centralized data sufficiency contract
+- `MLDatasetScope` — tenant + branch + timezone isolation envelope
+- `SalesDailyObservation`, `SalesDailyDataset` — daily sales time series
+- `InventoryDailyObservation`, `InventoryDailyDataset` — daily inventory snapshots
+- `ProductDemandFeatures`, `ProductDemandDataset` — demand velocity, CV, trend, days-of-cover
+- `BusinessInsightDataset` — unified business health (sales, products, payments, expenses, aging)
+- `TransactionAnomalyObservation`, `AnomalyDetectionDataset` — statistical anomaly detection
+- `MLFeatureVector`, `MLTrainingDataRequest`, `MLTrainingDataResponse` — generic feature contract
+- `MLInferenceRequest`, `MLInferenceResponse` — future inference boundary
+
+### Validation Schemas Added (`packages/validation/src/index.ts`)
+- `mlDatasetQuerySchema` — date range + branch + product filter for dataset endpoints
+- `mlTrainingDataRequestSchema` — prediction type, lookback, max training days
+
+### Backend Files Added / Changed
+- `apps/api/src/modules/ml/dataReadiness.ts` (1029 lines) — 8 dataset builders:
+  `buildSalesDailyDataset`, `buildInventoryDailyDataset`, `buildProductDemandDataset`,
+  `buildAnomalyDetectionDataset`, `buildBusinessInsightDataset`, `buildMLTrainingData`
+  Plus sufficiency rules, scope isolation helpers, and calendar-day bucketing.
+- `apps/api/src/modules/ml/pythonBridge.ts` (241 lines) — Python ML worker boundary:
+  payload formatters for sales_forecast, stock_forecast, anomaly_detection tasks;
+  stdin/stdout JSON IPC with timeout, error handling, and MODEL_FAILURE semantics.
+- `apps/api/src/modules/ml/service.ts` — added 6 dataset pipeline methods delegating
+  to dataReadiness builders via resolveDateRange.
+- `apps/api/src/modules/ml/route.ts` — added 6 endpoints:
+  `GET /ml/datasets/sales-daily`, `GET /ml/datasets/inventory-daily`,
+  `GET /ml/datasets/product-demand`, `GET /ml/datasets/anomalies`,
+  `GET /ml/datasets/business-insight`, `POST /ml/training-data`.
+- `packages/shared/src/index.ts` — fixed export specifiers for ESM compatibility.
+
+### Tests
+- `apps/api/src/tests/ml-data-readiness.test.ts` — 16 tests covering:
+  tenant isolation, branch isolation & rollup, zero-activity day filling,
+  data sufficiency thresholds, non-PAID exclusion, exact decimal precision,
+  product demand features, anomaly detection, business insight dataset,
+  ML feature extraction, Python bridge MODEL_FAILURE semantics,
+  invalid date range rejection, timezone awareness (UTC midnight vs civil day),
+  deterministic aggregation, empty dataset safety, unposted journal exclusion.
+- `apps/api`: **13 files / 145 tests passing** (was 12/129).
+- `apps/web`: **6 files / 74 tests passing** (unchanged).
+- Full monorepo: `pnpm -r run typecheck`, `lint`, `test`, `build` — ALL PASS.
+
+### Key Design Decisions
+1. **Data sufficiency is never faked** — every dataset carries a `sufficiency` field
+   with honest `INSUFFICIENT_DATA` when thresholds are not met.
+2. **MODEL_FAILURE ≠ INSUFFICIENT_DATA** — Python worker crashes are never disguised
+   as data insufficiency; they surface as explicit MODEL_FAILURE status.
+3. **Exact decimal arithmetic** — all monetary aggregation uses bignumber.js with
+   4-decimal precision; no floating-point money arithmetic anywhere.
+4. **Timezone-aware bucketing** — sales are bucketed by scope-local calendar day
+   (branch.timezone → business.timezone → UTC), not by server time or UTC midnight.
+5. **Tenant isolation** — every dataset builder filters by businessId; branch scope
+   is optional (null = business-level rollup).
+6. **Zero-day filling** — calendar ranges emit observations for every day including
+   days with zero activity, ensuring ML time series have no gaps.
+
+### Known Limitations
+- Python ML worker (`workers/ml/worker.py`) does not yet exist; `PythonBridge`
+  contract is ready but actual model training/inference is deferred to Phase 8.2+.
+- No caching of dataset results; each request recomputes from domainStore.
+- Product demand trend uses simple 7-day MA vs overall average ratio;
+  more sophisticated trend detection deferred.
+- Business insight dataset aging calculation uses range end date as reference;
+  real-time aging would use current date.
+
 

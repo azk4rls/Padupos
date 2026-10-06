@@ -851,6 +851,296 @@ export interface AnomalyEvent {
   detectedAt: string;
 }
 
+// ================================================================
+// PHASE 8.1 — ML DATA CONTRACTS
+// ================================================================
+
+/**
+ * ML Data Sufficiency Status
+ * Centralized concept for when the system can/cannot produce ML output.
+ */
+export type MLDataSufficiencyStatus =
+  | 'SUFFICIENT'
+  | 'INSUFFICIENT_DATA'
+  | 'INVALID_DATA'
+  | 'MODEL_FAILURE';
+
+export interface MLDataSufficiencyResult {
+  status: MLDataSufficiencyStatus;
+  /** Human-readable message for UI display. */
+  message: string;
+  /** Minimum observations required. */
+  requiredObservations?: number;
+  /** Actual observations available. */
+  actualObservations?: number;
+  /** Specific reason for insufficiency (for debugging). */
+  reason?: string;
+}
+
+/**
+ * Scope for all ML datasets - enforces tenant and branch isolation.
+ */
+export interface MLDatasetScope {
+  businessId: string;
+  branchId?: string | null;
+  timeZone: string;
+}
+
+/**
+ * Daily sales observation - the atomic unit for sales forecasting.
+ */
+export interface SalesDailyObservation {
+  /** Scope-local calendar day, YYYY-MM-DD. */
+  date: string;
+  /** Total revenue for the day (exact decimal string). */
+  revenue: string;
+  /** Total units sold across all products. */
+  unitsSold: string;
+  /** Number of transactions. */
+  transactionCount: number;
+  /** Gross profit for the day. */
+  grossProfit: string;
+  /** COGS for the day. */
+  cogs: string;
+}
+
+/**
+ * Complete daily sales dataset for a business/branch over a date range.
+ */
+export interface SalesDailyDataset {
+  scope: MLDatasetScope;
+  range: { startDate: string; endDate: string; dayCount: number };
+  granularity: 'DAY';
+  observations: SalesDailyObservation[];
+  totals: {
+    revenue: string;
+    unitsSold: string;
+    transactionCount: number;
+    grossProfit: string;
+    cogs: string;
+  };
+  sufficiency: MLDataSufficiencyResult;
+}
+
+/**
+ * Daily inventory observation for stock forecasting.
+ */
+export interface InventoryDailyObservation {
+  /** Scope-local calendar day, YYYY-MM-DD. */
+  date: string;
+  /** Product ID. */
+  productId: string;
+  /** Product SKU. */
+  sku: string | null;
+  /** Product name. */
+  productName: string;
+  /** Closing available stock for the day. */
+  closingStock: string;
+  /** Units sold (demand) for the day. */
+  demand: string;
+  /** Stock movements in (receipts, transfers in). */
+  stockIn: string;
+  /** Stock movements out (sales, transfers out, adjustments). */
+  stockOut: string;
+  /** Weighted average cost at day end. */
+  averageCost: string;
+}
+
+/**
+ * Daily inventory dataset for a business/branch over a date range.
+ */
+export interface InventoryDailyDataset {
+  scope: MLDatasetScope;
+  range: { startDate: string; endDate: string; dayCount: number };
+  granularity: 'DAY';
+  productIds: string[];
+  observations: InventoryDailyObservation[];
+  sufficiency: MLDataSufficiencyResult;
+}
+
+/**
+ * Product demand features for ML models.
+ */
+export interface ProductDemandFeatures {
+  productId: string;
+  sku: string | null;
+  productName: string;
+  /** Total units sold in the lookback window. */
+  totalDemand: string;
+  /** Average daily demand. */
+  avgDailyDemand: string;
+  /** Standard deviation of daily demand. */
+  demandStdDev: string;
+  /** Coefficient of variation (std/mean). */
+  demandCV: string;
+  /** Days with zero demand. */
+  zeroDemandDays: number;
+  /** Current available stock. */
+  currentStock: string;
+  /** Weighted average cost. */
+  averageCost: string;
+  /** Days of cover at current demand rate. */
+  daysOfCover: string | 'INFINITE';
+  /** Trend direction: 'UP' | 'DOWN' | 'FLAT'. */
+  trend: 'UP' | 'DOWN' | 'FLAT';
+  /** Moving average (7-day). */
+  movingAvg7d: string;
+  /** Moving average (30-day). */
+  movingAvg30d: string;
+}
+
+/**
+ * Product demand dataset for a business/branch.
+ */
+export interface ProductDemandDataset {
+  scope: MLDatasetScope;
+  range: { startDate: string; endDate: string; dayCount: number };
+  products: ProductDemandFeatures[];
+  sufficiency: MLDataSufficiencyResult;
+}
+
+/**
+ * Business insight dataset - aggregated metrics for AI insights.
+ */
+export interface BusinessInsightDataset {
+  scope: MLDatasetScope;
+  range: { startDate: string; endDate: string; dayCount: number };
+  /** Daily sales time series. */
+  salesSeries: SalesDailyObservation[];
+  /** Top products by revenue. */
+  topProducts: Array<{
+    productId: string;
+    productName: string;
+    revenue: string;
+    unitsSold: string;
+    grossProfit: string;
+  }>;
+  /** Payment method distribution. */
+  paymentMix: Record<string, string>;
+  /** Expense breakdown by category. */
+  expensesByCategory: Array<{
+    categoryId: string;
+    categoryName: string;
+    amount: string;
+  }>;
+  /** Inventory health summary. */
+  inventoryHealth: {
+    totalProducts: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+    totalStockValue: string;
+  };
+  /** Receivables aging. */
+  receivablesAging: {
+    current: string;
+    days1to30: string;
+    days31to60: string;
+    days61to90: string;
+    over90: string;
+  };
+  /** Payables aging. */
+  payablesAging: {
+    current: string;
+    days1to30: string;
+    days31to60: string;
+    days61to90: string;
+    over90: string;
+  };
+  sufficiency: MLDataSufficiencyResult;
+}
+
+/**
+ * Feature vector for ML models - generic container.
+ */
+export interface MLFeatureVector {
+  /** Feature names in order. */
+  featureNames: string[];
+  /** Feature values as decimal strings. */
+  values: string[];
+  /** Metadata about the observation. */
+  metadata: Record<string, unknown>;
+}
+
+/**
+ * Training data request from Python worker.
+ */
+export interface MLTrainingDataRequest {
+  businessId: string;
+  branchId?: string | null;
+  predictionType: 'SALES_FORECAST' | 'STOCK_FORECAST' | 'ANOMALY_DETECTION';
+  lookbackDays: number;
+  maxTrainingDays?: number;
+}
+
+/**
+ * Training data response to Python worker.
+ */
+export interface MLTrainingDataResponse {
+  businessId: string;
+  branchId?: string | null;
+  predictionType: 'SALES_FORECAST' | 'STOCK_FORECAST' | 'ANOMALY_DETECTION';
+  features: MLFeatureVector[];
+  targets: string[];
+  scope: MLDatasetScope;
+  range: { startDate: string; endDate: string; dayCount: number };
+  sufficiency: MLDataSufficiencyResult;
+}
+
+/**
+ * Inference request from Python worker.
+ */
+export interface MLInferenceRequest {
+  businessId: string;
+  branchId?: string | null;
+  modelId: string;
+  predictionType: 'SALES_FORECAST' | 'STOCK_FORECAST' | 'ANOMALY_DETECTION';
+  features: MLFeatureVector;
+}
+
+/**
+ * Inference response from Python worker.
+ */
+export interface MLInferenceResponse {
+  prediction: string;
+  lowerBound?: string;
+  upperBound?: string;
+  confidence?: number;
+  modelVersion: string;
+  generatedAt: string;
+}
+
+/**
+ * Anomaly observation for transaction anomaly detection.
+ */
+export interface TransactionAnomalyObservation {
+  transactionId: string;
+  date: string;
+  branchId: string;
+  amount: string;
+  itemCount: number;
+  paymentMethod: string;
+  baselineMeanAmount: string;
+  baselineStdDevAmount: string;
+  deviationScore: string;
+  isUnusual: boolean;
+  reason?: string;
+}
+
+/**
+ * Anomaly detection dataset for a business/branch.
+ */
+export interface AnomalyDetectionDataset {
+  scope: MLDatasetScope;
+  range: { startDate: string; endDate: string; dayCount: number };
+  observations: TransactionAnomalyObservation[];
+  baseline: {
+    meanAmount: string;
+    stdDevAmount: string;
+    sampleSize: number;
+  };
+  sufficiency: MLDataSufficiencyResult;
+}
+
 export interface AIInsight {
   id: string;
   businessId: string;

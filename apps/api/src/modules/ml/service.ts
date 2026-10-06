@@ -1,13 +1,45 @@
 import { domainStore } from '../domainStore.js';
 import { generatePrefixedId, toBN } from '@padupos/shared';
-import type { MLPrediction, AnomalyEvent } from '@padupos/types';
+import type {
+  MLPrediction,
+  AnomalyEvent,
+  SalesDailyDataset,
+  InventoryDailyDataset,
+  ProductDemandDataset,
+  AnomalyDetectionDataset,
+  BusinessInsightDataset,
+  MLTrainingDataResponse,
+  MLTrainingDataRequest,
+} from '@padupos/types';
 import BigNumber from 'bignumber.js';
+import {
+  type DateRangeQuery,
+  resolveDateRange,
+  todayInTimeZone,
+  resolveScopeTimeZone,
+  addCalendarDays,
+} from '../../lib/dateRange.js';
+import {
+  buildSalesDailyDataset,
+  buildInventoryDailyDataset,
+  buildProductDemandDataset,
+  buildAnomalyDetectionDataset,
+  buildBusinessInsightDataset,
+  buildMLTrainingData,
+} from './dataReadiness.js';
 
 export class MLService {
   static MIN_TRANSACTIONS_FOR_FORECAST = 30;
 
-  // 1. Sales Forecast
-  static getSalesForecast(businessId: string): { status: 'SUCCESS' | 'INSUFFICIENT_DATA'; prediction?: MLPrediction; message?: string } {
+  // ================================================================
+  // 1. BASELINE PREDICTIONS (EXISTING PHASE 7 COMPATIBILITY)
+  // ================================================================
+
+  static getSalesForecast(businessId: string): {
+    status: 'SUCCESS' | 'INSUFFICIENT_DATA';
+    prediction?: MLPrediction;
+    message?: string;
+  } {
     let transactionCount = 0;
     let totalSales = new BigNumber(0);
 
@@ -21,7 +53,8 @@ export class MLService {
     if (transactionCount < this.MIN_TRANSACTIONS_FOR_FORECAST) {
       return {
         status: 'INSUFFICIENT_DATA',
-        message: 'Belum cukup data historis untuk membuat prediksi penjualan yang andal. Dibutuhkan minimal 30 transaksi.',
+        message:
+          'Belum cukup data historis untuk membuat prediksi penjualan yang andal. Dibutuhkan minimal 30 transaksi.',
       };
     }
 
@@ -52,7 +85,6 @@ export class MLService {
     return { status: 'SUCCESS', prediction };
   }
 
-  // 2. Stock Forecast & Depletion Days
   static getStockForecast(businessId: string, branchId?: string) {
     const results = [];
 
@@ -103,7 +135,6 @@ export class MLService {
     return results;
   }
 
-  // 3. Anomaly Detection
   static detectAnomalies(businessId: string): AnomalyEvent[] {
     const anomalies: AnomalyEvent[] = [];
 
@@ -145,5 +176,75 @@ export class MLService {
     }
 
     return anomalies;
+  }
+
+  // ================================================================
+  // 2. PHASE 8.1 ML DATA READINESS PIPELINES & DATASETS
+  // ================================================================
+
+  static getSalesDailyDataset(
+    businessId: string,
+    branchId: string | null,
+    query: DateRangeQuery,
+  ): SalesDailyDataset {
+    const range = resolveDateRange(query, businessId, branchId);
+    return buildSalesDailyDataset(businessId, branchId, range);
+  }
+
+  static getInventoryDailyDataset(
+    businessId: string,
+    branchId: string | null,
+    query: DateRangeQuery,
+    productIds?: string[],
+  ): InventoryDailyDataset {
+    const range = resolveDateRange(query, businessId, branchId);
+    return buildInventoryDailyDataset(businessId, branchId, range, productIds);
+  }
+
+  static getProductDemandDataset(
+    businessId: string,
+    branchId: string | null,
+    query: DateRangeQuery,
+    productIds?: string[],
+  ): ProductDemandDataset {
+    const range = resolveDateRange(query, businessId, branchId);
+    return buildProductDemandDataset(businessId, branchId, range, productIds);
+  }
+
+  static getAnomalyDetectionDataset(
+    businessId: string,
+    branchId: string | null,
+    query: DateRangeQuery,
+  ): AnomalyDetectionDataset {
+    const range = resolveDateRange(query, businessId, branchId);
+    return buildAnomalyDetectionDataset(businessId, branchId, range);
+  }
+
+  static getBusinessInsightDataset(
+    businessId: string,
+    branchId: string | null,
+    query: DateRangeQuery,
+  ): BusinessInsightDataset {
+    const range = resolveDateRange(query, businessId, branchId);
+    return buildBusinessInsightDataset(businessId, branchId, range);
+  }
+
+  static getTrainingData(
+    businessId: string,
+    branchId: string | null,
+    req: MLTrainingDataRequest,
+  ): MLTrainingDataResponse {
+    const tz = resolveScopeTimeZone(businessId, branchId);
+    const today = todayInTimeZone(tz);
+    const daysToLookback = req.lookbackDays || 30;
+    const startDate = addCalendarDays(today, -daysToLookback);
+
+    const range = resolveDateRange(
+      { startDate, endDate: today },
+      businessId,
+      branchId,
+    );
+
+    return buildMLTrainingData(businessId, branchId, req.predictionType, range);
   }
 }

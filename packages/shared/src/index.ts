@@ -8,7 +8,14 @@ BigNumber.config({
   EXPONENTIAL_AT: [-10, 20],
 });
 
-export * from './offline';
+export {
+  type SyncOperation,
+  type SyncStatus,
+  type OfflineSyncQueueItem,
+  type SyncBatchResult,
+  validateOfflineCashSale,
+  deduplicateSyncBatch,
+} from './offline';
 
 // ================================================================
 // 1. DECIMAL ARITHMETIC UTILITIES
